@@ -2,8 +2,8 @@
 
 This is a free working unofficial Web UI for [Oban Job Processor](https://github.com/oban-bg/oban), allowing you to view jobs in different states (executing, scheduled, retryable, cancelled, discarded, complete) and perform basic operations (run, delete, retry, etc)
 
-![View all jobs](free_oban_ui/assets/img/index.png)
-![View individual job](free_oban_ui/assets/img/show.png)
+![View all jobs](assets/img/index.png)
+![View individual job](assets/img/show.png)
 
 
 Designed for hobby projects or if you cannot afford paid Oban Web. Please make sure to support & buy official Oban UI package if you can: https://getoban.pro/
