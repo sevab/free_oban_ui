@@ -14,6 +14,7 @@ defmodule FreeObanUi.Application do
       {Phoenix.PubSub, name: FreeObanUi.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: FreeObanUi.Finch},
+      {Oban, Application.fetch_env!(:free_oban_ui, Oban)},
       # Start a worker by calling: FreeObanUi.Worker.start_link(arg)
       # {FreeObanUi.Worker, arg},
       # Start to serve requests, typically the last entry

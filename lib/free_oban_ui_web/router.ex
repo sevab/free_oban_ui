@@ -20,6 +20,13 @@ defmodule FreeObanUiWeb.Router do
     get "/", PageController, :home
   end
 
+  scope "/oban", FreeObanUiWeb do
+    pipe_through [:browser]
+
+    live "/", ObanLive.Index, :index
+    live "/:id", ObanLive.Index, :show
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", FreeObanUiWeb do
   #   pipe_through :api

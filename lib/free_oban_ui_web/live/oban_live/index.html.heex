@@ -1,0 +1,244 @@
+<div class="flex flex-col sm:flex-row">
+  <div class="w-full sm:w-1/4 bg-gray-100 p-4">
+    <div class="flex justify-between mt-2 mb-4">
+      <h2 class="text-xl font-bold">States</h2>
+      <%= if @state not in ["", nil] do %>
+        <.link patch={~p"/oban?#{[queue: @queue, state: nil]}"} class="">
+          Clear
+        </.link>
+      <% end %>
+    </div>
+    <%= for state <- ~w(scheduled executing completed retryable cancelled discarded) do %>
+      <.link
+        patch={~p"/oban?#{[state: state, queue: @queue]}"}
+        class={"#{if @state == state, do: "bg-gray-200 text-gray-900 dark:bg-gray-900 dark:text-white", else: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300"} text-gray-600 hover:bg-gray-300 hover:text-gray-900 group flex items-center px-2 py-2.5 fw-500 rounded-md dark:hover:bg-gray-700 dark:hover:text-white"}
+      >
+        <%= state %> (<%= @counts[state] || 0 %>)
+      </.link>
+    <% end %>
+
+    <div class="flex justify-between mt-8 mb-4">
+      <h2 class="text-xl font-bold">Queues</h2>
+      <%= if @queue not in ["", nil] do %>
+        <.link patch={~p"/oban?#{[queue: nil, state: @state]}"} class="">
+          Clear
+        </.link>
+      <% end %>
+    </div>
+    <%= for {queue, count} <- @queues do %>
+      <.link
+        patch={~p"/oban?#{[queue: queue, state: @state]}"}
+        class={"#{if @queue == queue, do: "bg-gray-200 text-gray-900 dark:bg-gray-900 dark:text-white", else: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300"} text-gray-600 hover:bg-gray-300 hover:text-gray-900 group flex items-center px-2 py-2.5 fw-500 rounded-md dark:hover:bg-gray-700 dark:hover:text-white"}
+      >
+        <%= queue %> (<%= count %>)
+      </.link>
+    <% end %>
+  </div>
+
+  <div class="w-full sm:w-3/4 p-4">
+    <div class="mb-4 flex justify-between items-center">
+      <%= if @live_action == :index do %>
+        <h1 class="text-2xl font-bold">Oban Jobs</h1>
+      <% else %>
+        <.link patch={back_url(assigns)} class="text-2xl font-bold hover:text-gray-500">← Oban Jobs</.link>
+      <% end %>
+      <div>
+        <button
+          phx-click="toggle_refresh"
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          <%= if @auto_refresh, do: "Disable", else: "Enable" %> Auto-refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <% state = if @live_action == :index, do: @state, else: @job.state %>
+      <% event = if @live_action == :index, do: "bulk_action", else: "execute_action" %>
+      <%= for action <- available_actions(state) do %>
+        <button
+          phx-click={event}
+          phx-value-action={action}
+          data-confirm={"Are you sure you want to #{action} this job now?"}
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+          disabled={@live_action == :index && Enum.empty?(@selected_jobs)}
+        >
+          <%= action |> String.capitalize() %>
+        </button>
+      <% end %>
+    </div>
+
+    <%= if @live_action == :index do %>
+      <div class="overflow-x-auto">
+        <div class="inline-block min-w-full align-middle">
+          <div class="relative border rounded ">
+            <!-- Selected row actions, only show when rows are selected. -->
+            <!-- <div class="absolute top-0 left-14 flex h-12 items-center space-x-3 bg-white sm:left-12"> -->
+            <!--   <button type="button" class="inline-flex items-center rounded bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white">Bulk edit</button> -->
+            <!--   <button type="button" class="inline-flex items-center rounded bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white">Delete all</button> -->
+            <!-- </div> -->
+            <table class="min-w-full table-fixed divide-y divide-gray-300">
+              <thead>
+                <tr>
+                  <th scope="col" class="relative px-7 sm:w-12 sm:px-6">
+                    <input
+                      type="checkbox"
+                      class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                    />
+                  </th>
+                  <th
+                    scope="col"
+                    class="pr-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                  >
+                    ID
+                  </th>
+                  <th
+                    scope="col"
+                    class="min-w-[12rem] max-w-xs py-3.5 pr-3 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Worker
+                  </th>
+                  <th
+                    scope="col"
+                    class="min-w-[12rem] py-3.5 pr-3 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Attempt
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                  >
+                    State
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Queue
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Inserted
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                <!-- Selected: "bg-gray-50" -->
+                <%= for job <- @jobs do %>
+                  <tr>
+                    <td class="relative px-7 sm:w-12 sm:px-6">
+                      <!-- Selected row marker, only show when row is selected. -->
+                      <!-- <div class="absolute inset-y-0 left-0 w-0.5 bg-blue-600"></div> -->
+                      <input
+                        type="checkbox"
+                        class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                      />
+                    </td>
+                    <td class="whitespace-nowrap pr-3 py-4 text-sm text-gray-500">
+                      <%= job.id %>
+                    </td>
+                    <!-- Selected: "text-blue-600", Not Selected: "text-gray-900" -->
+                    <td class="flex flex-col max-w-sm py-4 pr-3 font-medium text-gray-900">
+                      <.link
+                        class="text-blue-600 hover:text-blue-800 hover:text-underline"
+                        patch={~p"/oban/#{job.id}?#{[queue: @queue, state: @state, page: @page]}"}
+                      >
+                        <%= job.worker %>
+                      </.link>
+                      <samp
+                        title={Jason.encode!(job.args)}
+                        class="line-clamp-3 break-all text-sm text-gray-500 font-mono max-w-md"
+                      >
+                        <%= Jason.encode!(job.args) %>
+                      </samp>
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <%= job.attempt %> / <%= job.max_attempts %>
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <span class="inline-flex items-center rounded-full bg-gray-50 px-2.5 py-1.5 text-xs fs-14 font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                        <%= job.state %>
+                      </span>
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <span class="inline-flex items-center rounded-full bg-gray-50 px-2.5 py-1.5 text-xs fs-14 font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                        <%= job.queue %>
+                      </span>
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <%= from_now_short(job.inserted_at) %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <div class="flex">
+            <button
+              class={(if @page == "0", do: "cursor-not-allowed text-gray-500", else: "cursor-pointer text-blue-500 hover:bg-gray-100") <> " w-1/2 p-5 font-medium text-center bg-white border border-t-0 border-r-0 rounded-bl"}
+              phx-click="paginate"
+              phx-value-page={String.to_integer(assigns.page) - 1}
+              disabled={@page == "0"}
+              type="button"
+            >
+              Previous
+            </button>
+
+            <div class="bg-white p-5 text-center border border-t-0">
+              <%= @page %>
+            </div>
+            <button
+              class={(if length(@jobs) == 0, do: "cursor-not-allowed text-gray-500", else: "cursor-pointer text-blue-500 hover:bg-gray-100") <> " w-1/2 p-5 font-medium text-center bg-white border border-t-0 rounded-br border-l-0"}
+              phx-click="paginate"
+              phx-value-page={String.to_integer(assigns.page) + 1}
+              disabled={length(@jobs) == 0}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <%= if @job do %>
+        <div class="bg-white border rounded">
+          <header class="flex 2 py-3 border-b px-4">
+            <h1 class="w-3/5 text-xl leading-6 fw-700 text-gray-900">Job #<%= @job.id %></h1>
+          </header>
+
+          <dl class="grid grid-cols-1 sm:grid-cols-2 px-4 border-b">
+            <%= for stat <- job_stats(@job) do %>
+              <div class="border-t border-gray-100 px-4 py-3 sm:col-span-1 sm:px-0">
+                <dt class="font-bold leading-6 text-gray-900"><%= stat.title %></dt>
+                <dd class="mt-1 leading-6 text-gray-500 sm:mt-2 font-mono font-medium"><%= stat.value %></dd>
+              </div>
+            <% end %>
+            <div class="border-t border-gray-100 px-4 py-3 sm:col-span-2 sm:px-0">
+              <dt class="font-bold">Args</dt>
+              <dd><pre><%= Jason.encode!(@job.args, pretty: true) %></pre></dd>
+            </div>
+            <div class="border-t border-gray-100 px-4 py-3 sm:col-span-2 sm:px-0">
+              <dt class="font-bold">Meta</dt>
+              <dd><pre><%= Jason.encode!(@job.meta, pretty: true) %></pre></dd>
+            </div>
+
+            <div class="border-t border-gray-100 px-4 py-3 sm:col-span-2 sm:px-0">
+              <dt class="font-bold">Errors</dt>
+              <dd>
+              <%= for error <- @job.errors do %>
+                  <div class="fw-500 mt-4">
+                    Attempt <%= error["attempt"] %> / <%= @job.max_attempts %> at <%= error["at"] %>
+                  </div>
+                  <div class="break-all font-mono font-medium text-gray-500"><%= raw error["error"] %></div>
+                <% end %>
+              </dd>
+            </div>
+          </dl>
+
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

@@ -35,3 +35,4 @@ free_oban_ui-*.tar
 npm-debug.log
 /assets/node_modules/
 
+.DS_Store
